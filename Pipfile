@@ -8,6 +8,7 @@ opencv-python = "*"
 birl = {file = "https://github.com/Borda/BIRL/archive/master.zip"}
 numpy = "*"
 matplotlib = "*"
+itk = "*"
 
 [dev-packages]
 
