@@ -22,9 +22,8 @@ def belid_match(img1, img2):
         return
 
 
-def whitewashing(im):
+def whitewashing(im, threshold=1):
     im64 = im.astype(np.int64)
-    threshold = 1
     bg = np.abs(im64[:, :, 0] - im64[:, :, 1]) < threshold  # B == G
     gr = np.abs(im64[:, :, 1] - im64[:, :, 2]) < threshold  # G == R
     rb = np.abs(im64[:, :, 0] - im64[:, :, 2]) < threshold  # R == B
