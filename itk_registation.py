@@ -3,8 +3,10 @@ import itk
 import cv2
 import os
 from config import output_folder
-from baseline import grayscale, whitewashing
+import SimpleITK as sitk
+from config import output_folder
 import numpy as np
+from utils import whitewashing, otsu
 
 # if VS(itk.Version.GetITKVersion()) < VS("4.9.0"):
 #     print("ITK 4.9.0 is required.")
@@ -13,15 +15,14 @@ import numpy as np
 
 def itk_registration(fixed_input_image,
                      moving_input_image,
-                     output_image=output_folder / "final.png",
-                     output_before=output_folder / "before.png",
-                     output_after=output_folder / "after.png"):
+                     output_name="output"):
     PixelType = itk.ctype("float")
 
     # Convert images so that there is no transparent background + good itk compatibility
     fixedImage = cv2.imread(fixed_input_image.as_posix())
     movingImage = cv2.imread(moving_input_image.as_posix())
     fixedImage, movingImage = whitewashing(fixedImage), whitewashing(movingImage)
+    fixedImage, movingImage = otsu(fixedImage), otsu(movingImage)
     cv2.imwrite('tmp1.png', fixedImage)
     cv2.imwrite('tmp2.png', movingImage)
     fixedImage = itk.imread('tmp1.png', PixelType)
@@ -104,7 +105,7 @@ def itk_registration(fixed_input_image,
 
     caster = itk.CastImageFilter[FixedImageType, OutputImageType].New(Input=resampler)
 
-    writer = itk.ImageFileWriter.New(Input=caster, FileName=output_image.as_posix())
+    writer = itk.ImageFileWriter.New(Input=caster, FileName=(output_folder / f"{output_name}_final.png").as_posix())
     writer.Update()
 
     difference = itk.SubtractImageFilter.New(Input1=fixedImage, Input2=resampler)
@@ -119,9 +120,11 @@ def itk_registration(fixed_input_image,
 
     resampler.SetDefaultPixelValue(1)
     writer.SetInput(intensityRescaler.GetOutput())
-    writer.SetFileName(output_after.as_posix())
+    writer.SetFileName((output_folder / f"{output_name}_after.png").as_posix())
     writer.Update()
 
     resampler.SetTransform(identityTransform)
-    writer.SetFileName(output_before.as_posix())
+    writer.SetFileName((output_folder / f"{output_name}_before.png").as_posix())
     writer.Update()
+
+    return translationAlongX, translationAlongY

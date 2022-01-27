@@ -1,7 +1,7 @@
-import numpy as np
 import matplotlib.pyplot as plt
 import cv2
 import logging
+from utils import whitewashing
 
 
 def belid_match(img1, img2):
@@ -20,21 +20,6 @@ def belid_match(img1, img2):
     answer = input("Continue ?")
     if answer[0] != "y":
         return
-
-
-def whitewashing(im, threshold=1):
-    im64 = im.astype(np.int64)
-    bg = np.abs(im64[:, :, 0] - im64[:, :, 1]) < threshold  # B == G
-    gr = np.abs(im64[:, :, 1] - im64[:, :, 2]) < threshold  # G == R
-    rb = np.abs(im64[:, :, 0] - im64[:, :, 2]) < threshold  # R == B
-    mask = np.bitwise_and(np.bitwise_and(bg, gr), rb)
-    im[mask, :] = [255, 255, 255]
-    return im
-
-
-def grayscale(im):
-    gray_image = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
-    return gray_image
 
 
 def show_image(im, title=None):
