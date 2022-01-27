@@ -6,16 +6,25 @@ import pandas as pd
 from pathlib import Path
 import math
 
+def transparancy_mask(image):
+    trans_mask = image[:, :, 3] < 0.99
+
+    # replace areas of transparency with white and not transparent
+    image[trans_mask] = [255, 255, 255, 255]
+
+    # new image without alpha channel...
+    return cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
+
 def open_image(path, window_name, number):
-    img = cv2.imread(path)
+    img = cv2.imread(path, cv2.IMREAD_UNCHANGED)
     cv2.namedWindow(window_name)
     img = cv2.resize(img, (int(img.shape[1] * 1000 / img.shape[0]), 1000))
-    return img
+    return transparancy_mask(img)
 
 data_path = Path("../immuno_project/data")
 
-dirs = ["A00483-C", "A00776-B", "A02076-2B", "A02080-E", "A02633-2A","A02634-2C", "A02969-B", "A02969-C", "A02969-F"]
-
+dirs = ["A00483-C", "A00776-B", "A02076-2B", "A02080-E","A02633-2A","A02634-2C", "A02969-B", "A02969-C", "A02969-F"]
+# "A00483-C", "A00776-B", "A02076-2B", "A02080-E",
 def string_to_tuple(df):
     for x in df.columns.values:
         df[x] = df[x].apply(eval)
@@ -35,14 +44,14 @@ for dir in dirs:
             points[[col+'_x', col+'_y']] = pd.DataFrame(points[col].tolist(), index=points.index)
         sums = points.sum()
         cog = []
-        for col in cols:
+        """for col in cols:
             cog.append((sums[col+"_x"]/points.shape[0], sums[col+"_y"]/points.shape[0]))
         print(cog)
 
         translation = (cog[0][0] - cog[1][0], cog[0][1] - cog[1][1])
         print("translation ", translation)
 
-        matrix = []
+        
         N = np.zeros(shape=(2, 2))
         for index, row in points.iterrows():
             a = np.array([[row[cols[0]+"_x"], row[cols[0]+"_y"]]])
@@ -55,6 +64,27 @@ for dir in dirs:
         rotation = np.transpose(vh) @ np.transpose(u)
         print("rotation ", rotation)
         print("rotation angle ", math.degrees(math.atan2(rotation[1][0], rotation[0][0])))
+        """
+        # trans = pinv(M) * proj
+        # trans = pinv(img1) * img2
+        M = np.zeros(shape=(len(points) * 2, 4))
+        proj = np.zeros(shape=(len(points) * 2, 1))
+        for index, row in points.iterrows():
+            x = row[cols[0] + "_x"]
+            y = row[cols[0] + "_y"]
+
+            M[index*2] = [x, y, 1, 0]
+            M[(index*2)+1] = [y, -x, 0, 1]
+
+            proj[index*2] = row[cols[1] + "_x"]
+            proj[index*2+1] = row[cols[1] + "_y"]
+
+        T = np.linalg.pinv(M) @ proj
+        rotation = np.float32([
+            [T[0][0], T[1][0], T[2][0]],
+            [-T[1][0], T[0][0], T[3][0]],
+            # [0, 0, 1]
+        ])
 
         first_image_path = Path(file.parents[0] / cols[0])
         other_image_path = Path(file.parents[0] / cols[1])
@@ -64,20 +94,28 @@ for dir in dirs:
 
         blend1 = cv2.addWeighted(img1, 0.5, img2, 0.5, 0.0)
 
-        M = np.float32([
+        """M = np.float32([
             [1, 0, translation[0]],
             [0, 1, translation[1]]
         ])
         shifted = cv2.warpAffine(img2, M, (img2.shape[1], img2.shape[0]))
+
         M = np.float32([
             [rotation[0][0], rotation[0][1], 0],
             [rotation[1][0], rotation[1][1], 0]
         ])
-        rotated = cv2.warpAffine(img1, M, (img1.shape[1], img1.shape[0]))
-        blend2 = cv2.addWeighted(rotated, 0.5, shifted, 0.5, 0.0)
-        blend3 = cv2.addWeighted(img1, 0.5, shifted, 0.5, 0.0)
+        (h, w) = img1.shape[:2]
+        (cX, cY) = (w // 2, h // 2)
+        M = cv2.getRotationMatrix2D((cX, cY),
+                                    # math.degrees(math.atan2(rotation[1][0], rotation[0][0])),
+                                    180, 1.0)
+        rotated = cv2.warpAffine(img1, M, (img1.shape[1], img1.shape[0]))"""
+        rotated = cv2.warpAffine(img1, rotation, (img1.shape[1], img1.shape[0]))
+
+        blend2 = cv2.addWeighted(rotated, 0.5, img2, 0.5, 0.0)
+        # blend3 = cv2.addWeighted(img1, 0.5, shifted, 0.5, 0.0)
         while (1):
-            cv2.imshow('image1', blend3)
+            cv2.imshow('image1', blend1)
             cv2.imshow('image2', blend2)
             if cv2.waitKey(20) & 0xFF == 27:
                 break
