@@ -21,10 +21,7 @@ def open_image(path, window_name, number):
     img = cv2.resize(img, (int(img.shape[1] * 1000 / img.shape[0]), 1000))
     return transparancy_mask(img)
 
-data_path = Path("../immuno_project/data")
 
-dirs = ["A00483-C", "A00776-B", "A02076-2B", "A02080-E","A02633-2A","A02634-2C", "A02969-B", "A02969-C", "A02969-F"]
-# "A00483-C", "A00776-B", "A02076-2B", "A02080-E",
 def string_to_tuple(df):
     for x in df.columns.values:
         df[x] = df[x].apply(eval)
@@ -83,7 +80,7 @@ def compute_transformation(csv_file):
         [-T[1][0], T[0][0], T[3][0]],
         # [0, 0, 1]
     ])
-    return trans, cols
+    return trans, points, cols
 
 def show_results(first_image_path, other_image_path, transformation):
     img1 = open_image(str(first_image_path), "image1", 0)
@@ -118,14 +115,20 @@ def show_results(first_image_path, other_image_path, transformation):
             break
     cv2.destroyAllWindows()
 
+"""
+data_path = Path("../immuno_project/data")
+
+dirs = ["A00483-C", "A00776-B", "A02076-2B", "A02080-E","A02633-2A","A02634-2C", "A02969-B", "A02969-C", "A02969-F"]
+# "A00483-C", "A00776-B", "A02076-2B", "A02080-E",
+
 for dir in dirs:
     path = data_path / (dir+"/thumbnails")
     for file in path.glob('*.csv'):
         print("Neow on ", file)
 
-        trans, cols = compute_transformation(file)
+        trans, _, cols = compute_transformation(file)
 
         first_image_path = Path(file.parents[0] / cols[0])
         other_image_path = Path(file.parents[0] / cols[1])
 
-        show_results(first_image_path, other_image_path, trans)
+        show_results(first_image_path, other_image_path, trans)"""
