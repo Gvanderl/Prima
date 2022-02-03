@@ -7,7 +7,7 @@ import SimpleITK as sitk
 from config import output_folder
 import numpy as np
 from utils import whitewashing, otsu
-
+from compute_matrices import open_image
 # if VS(itk.Version.GetITKVersion()) < VS("4.9.0"):
 #     print("ITK 4.9.0 is required.")
 #     sys.exit(1)
@@ -19,8 +19,8 @@ def itk_registration(fixed_input_image,
     PixelType = itk.ctype("float")
 
     # Convert images so that there is no transparent background + good itk compatibility
-    fixedImage = cv2.imread(fixed_input_image.as_posix())
-    movingImage = cv2.imread(moving_input_image.as_posix())
+    fixedImage = open_image(fixed_input_image.as_posix()) # TODO
+    movingImage = open_image(moving_input_image.as_posix())
     fixedImage, movingImage = whitewashing(fixedImage), whitewashing(movingImage)
     fixedImage, movingImage = otsu(fixedImage), otsu(movingImage)
     cv2.imwrite('tmp1.png', fixedImage)

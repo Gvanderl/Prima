@@ -5,6 +5,7 @@ import pandas as pd
 from utils import read_points, image_iterator
 from config import output_folder
 import cv2
+import scipy.io
 from compute_matrices import compute_transformation, show_results, open_image
 
 
@@ -48,7 +49,7 @@ for base_image_path, other_image_path in image_iterator():
     print("Using computed transformation")
     trans = compute_transformation(points)
     new_points = eval_transform(points, trans)
-    # show_results(base_image_path, other_image_path, trans, points, new_points)
+    show_results(base_image_path, other_image_path, trans, points, new_points)
 
     # ITK
     print("Using ITK")
@@ -56,15 +57,16 @@ for base_image_path, other_image_path in image_iterator():
                                (itk_transformations["Other"] == other_image_path.name)][["X", "Y"]].values[0]
     other_image = open_image(other_image_path.as_posix(), "tmp")
     cv2.destroyAllWindows()
-
     trans = np.array(
         [[1, 0, -x * other_image.shape[1]],
          [0, 1, -y * other_image.shape[0]]]
     )
     new_points = eval_transform(points, trans)
-    show_results(base_image_path, other_image_path, trans, points, new_points)
+    # show_results(base_image_path, other_image_path, trans, points, new_points)
 
-
-
-
-
+    # print("Using Greedy")
+    # path = output_folder.parent / "greedy_output" / (other_image_path.stem + "affine.mat")
+    # trans = mat = scipy.io.loadmat(path)
+    # full_image = cv2.imread(other_image_path.as_posix())
+    # new_points = eval_transform(points, trans)
+    # show_results(base_image_path, other_image_path, trans, points, new_points)
