@@ -1,41 +1,55 @@
-import cv2
 import matplotlib.pyplot as plt
-import os
 import numpy as np
-import pandas as pd
-from pathlib import Path
 import math
-from compute_matrices import compute_transformation, string_to_tuple
+import pandas as pd
+from utils import read_points, image_iterator
+from config import output_folder, data_folder
+from compute_matrices import compute_transformation, string_to_tuple, show_results
 
-data_path = Path("../immuno_project/data")
 
-dirs = ["A00483-C", "A00776-B", "A02076-2B", "A02080-E","A02633-2A","A02634-2C", "A02969-B", "A02969-C", "A02969-F"]
-# "A00483-C", "A00776-B", "A02076-2B", "A02080-E",
+def euclidian_distance(x1, x2, y1, y2):
+    return math.sqrt(math.pow(x1-x2, 2) + math.pow(y1-y2, 2))
 
-for dir in dirs:
-    path = data_path / (dir+"/thumbnails")
-    for file in path.glob('*.csv'):
-        print("Neow on ", file)
 
-        trans, points, cols = compute_transformation(file)
-        sums = points.sum()
-        cog = []
+itk_transformations = pd.read_csv(output_folder / "itk_transformations.csv")
 
-        for col in cols:
-            cog.append((sums[col+"_x"]/points.shape[0], sums[col+"_y"]/points.shape[0]))
+for base_image_path, other_image_path in image_iterator():
+    json_path = output_folder / (base_image_path.stem + "_" + other_image_path.stem + ".json")
+    if not json_path.exists():
+        continue
+    print("Neow on ", json_path.stem)
 
-        new_points = []
-        for index, row in points.iterrows():
-            p = np.transpose(np.array([row[cols[0]+"_x"], row[cols[0]+"_y"], 1]))
-            new_points.append((trans @ p))
+    points = read_points(json_path)
 
-        new_points = np.array(new_points)
-        new_cog = new_points.sum(axis=0)/len(new_points)
-        print(new_cog)
+    # Computed
+    # trans = compute_transformation(points)
 
-        print("difference avant transformation = (",
-              "{:.4f}".format(cog[1][0] -cog[0][0]),
-              ", ", "{:.4f}".format(cog[1][1]- cog[0][1]), ")")
-        print("difference apres transformation = (",
-              "{:.6f}".format(cog[1][0] -new_cog[0]),
-              ", ", "{:.6f}".format(cog[1][1]- new_cog[1]), ")")
+    # ITK
+    x, y = itk_transformations[(itk_transformations["Name"] == base_image_path.name) &
+                               (itk_transformations["Other"] == other_image_path.name)][["X", "Y"]].values[0]
+    trans = np.array(
+        [[1, 0, -x],
+         [0, 1, -y]]
+    )
+
+    new_points = []
+    for x, y in points[1]:
+        p = np.transpose(np.array([x, y, 1]))
+        new_points.append((trans @ p))
+
+    new_points = np.array(new_points)
+
+    distances = np.zeros((len(points[0])))
+    for index, ((x1, y1), (x2, y2)) in enumerate(zip(points[0], new_points)):
+        distances[index] = euclidian_distance(x1, x2, y1, y2)
+
+    plt.hist(distances)
+    plt.title(f"Distribution of distances for {json_path.stem}")
+    plt.show()
+
+    print(f"Mean distance is {distances.mean():.2f} for {json_path.stem}\n\n")
+
+    show_results(base_image_path, other_image_path, trans, points, new_points)
+
+
+

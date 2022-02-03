@@ -5,6 +5,7 @@ import numpy as np
 from config import data_folder, output_folder
 import json
 from os import listdir
+from utils import read_points, image_iterator
 
 
 class Pointer:
@@ -33,7 +34,7 @@ class Pointer:
             color = self.get_color(len(self.points[param[1]]))
             cv2.circle(param[0], (x, y), 4, color, -1)
             self.points[param[1]].append((x, y))
-            print(self.points)
+            print(f"{len(self.points[param[1]])} Pair of points")
         elif event == cv2.EVENT_MBUTTONDOWN:
             closest_point = None, float("inf")
             for i, (x2, y2) in enumerate(self.points[param[1]]):
@@ -67,10 +68,7 @@ class Pointer:
 
         out_path = output_folder / f"{self.image1_path.stem}_{self.image2_path.stem}.json"
         if out_path.exists():
-            with open(out_path) as f:
-                self.points = json.load(f)
-                self.points[0] = [tuple(x) for x in self.points[0]]
-                self.points[1] = [tuple(x) for x in self.points[1]]
+            self.points = read_points(out_path)
 
         img1 = self.draw_img1()
         img2 = self.draw_img2()
@@ -108,20 +106,8 @@ class Pointer:
 
 
 if __name__ == '__main__':
-    samples = [d for d in listdir(data_folder) if "." not in d]
-    quit = False
-    for sample in samples:
-        img_folder = data_folder / sample / "thumbnails"
-        base_image_path = img_folder / (sample + ".png")
-        assert base_image_path.exists(), f"{base_image_path} does not exist"
-
-        for other_image in listdir(img_folder):
-            other_image_path = img_folder / other_image
-            if other_image_path == base_image_path:
-                continue
-            pointer = Pointer(base_image_path, other_image_path)
-            quit = pointer.run()
-            if quit:
-                break
+    for base_image_path, other_image_path in image_iterator():
+        pointer = Pointer(base_image_path, other_image_path)
+        quit = pointer.run()
         if quit:
             break
