@@ -127,4 +127,4 @@ def itk_registration(fixed_input_image,
     writer.SetFileName((output_folder / f"{output_name}_before.png").as_posix())
     writer.Update()
 
-    return translationAlongX, translationAlongY
+    return translationAlongX / movingImage.shape[1], translationAlongY / movingImage.shape[0]
