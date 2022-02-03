@@ -14,7 +14,7 @@ def transparancy_mask(image):
     return cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
 
 
-def open_image(path, window_name, number):
+def open_image(path, window_name):
     img = cv2.imread(path, cv2.IMREAD_UNCHANGED)
     cv2.namedWindow(window_name)
     img = cv2.resize(img, (int(img.shape[1] * 1000 / img.shape[0]), 1000))
@@ -48,8 +48,8 @@ def compute_transformation(points):
 
 
 def show_results(first_image_path, other_image_path, transformation, points, new_points):
-    img1 = open_image(str(first_image_path), "Before", 0)
-    img2 = open_image(str(other_image_path), "After", 1)
+    img1 = open_image(str(first_image_path), "Before")
+    img2 = open_image(str(other_image_path), "After")
 
     blend1 = cv2.addWeighted(img1, 0.5, img2, 0.5, 0.0)
     rotated = cv2.warpAffine(img2, transformation, (img2.shape[1], img2.shape[0]))
