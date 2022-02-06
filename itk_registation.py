@@ -19,8 +19,9 @@ def itk_registration(fixed_input_image,
     PixelType = itk.ctype("float")
 
     # Convert images so that there is no transparent background + good itk compatibility
-    fixedImage = open_image(fixed_input_image.as_posix()) # TODO
-    movingImage = open_image(moving_input_image.as_posix())
+    fixedImage = cv2.imread(fixed_input_image.as_posix())
+    movingImage = cv2.imread(moving_input_image.as_posix())
+    movingImage = cv2.resize(movingImage, fixedImage.shape[:2:][::-1])
     fixedImage, movingImage = whitewashing(fixedImage), whitewashing(movingImage)
     fixedImage, movingImage = otsu(fixedImage), otsu(movingImage)
     cv2.imwrite('tmp1.png', fixedImage)
