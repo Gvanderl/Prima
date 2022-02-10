@@ -65,7 +65,7 @@ def show_results(first_image_path, other_image_path, transformation, points, new
     for x, y in new_points:
         cv2.circle(blend2, (int(x), int(y)), 4, (150, 200, 0), -1)
 
-    while (1):
+    while 1:
         cv2.imshow("Before", blend1)
         cv2.imshow("After", blend2)
         if cv2.waitKey(20) & 0xFF == 27:

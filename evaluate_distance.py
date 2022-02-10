@@ -62,7 +62,7 @@ for base_image_path, other_image_path in image_iterator():
          [0, 1, -y * other_image.shape[0]]]
     )
     new_points = eval_transform(points, trans)
-    # show_results(base_image_path, other_image_path, trans, points, new_points)
+    show_results(base_image_path, other_image_path, trans, points, new_points)
 
     print("Using Greedy")
     path = output_folder.parent / "greedy_output" / (other_image_path.stem + "affine.mat")
