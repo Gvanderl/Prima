@@ -64,11 +64,12 @@ class Pointer:
         # Create a black image, a window and bind the function to window
         quit_flag = False
 
-        print(f"Matching {self.image1_path} and {self.image2_path}")
+        print(f"\n\nMatching {self.image1_path} and {self.image2_path}")
 
         out_path = output_folder / f"{self.image1_path.stem}_{self.image2_path.stem}.json"
         if out_path.exists():
             self.points = read_points(out_path)
+        print(f"{len(self.points[1])} Pair of points")
 
         img1 = self.draw_img1()
         img2 = self.draw_img2()
@@ -99,7 +100,7 @@ class Pointer:
         with open(out_path, 'w') as f:
             json.dump(self.points, f)
         print(f"Saved to {out_path}")
-        print(self.points)
+        print(f"{len(self.points[1])} Pair of points")
         cv2.destroyAllWindows()
 
         return quit_flag

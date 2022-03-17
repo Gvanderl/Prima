@@ -5,13 +5,14 @@ import json
 import numpy as np
 from skimage.measure import label, regionprops
 from skimage.measure._regionprops import RegionProperties
-from skimage.filters import threshold_multiotsu
 from skimage import transform
+from matplotlib import cm
+import matplotlib.pyplot as plt
+import cv2
 from scipy import ndimage
 from PIL import Image
-import pathlib
-from pathlib import Path
-import cv2
+from utils import image_iterator
+from skimage.filters import threshold_multiotsu
 
 
 Coords = Tuple[float, float] or List[int]
@@ -39,7 +40,7 @@ def get_tissue_pale_check(image: Image) -> np.array:
         threshold = threshold_multiotsu(image_projection, classes=3)[1]
 
     # apply threshold
-    mask = (image_projection < threshold) * 255  # MAX_PIXEL_VALUE
+    mask = (image_projection < threshold) * 255
     return mask
 
 
@@ -115,57 +116,39 @@ def breakdown_mask_into_pieces(mask: np.array) -> List[np.array]:
     all_clusters = cluster_props(props=sorted_objects, clusters=[])
     logging.debug('len final ', len(all_clusters))
     # extract a mask object for each cluster
-    rows = []
-    cols = []
     for cluster in all_clusters:
         row_min = min(o.bbox[0] for o in cluster)
         col_min = min(o.bbox[1] for o in cluster)
         row_max = max(o.bbox[2] for o in cluster)
         col_max = max(o.bbox[3] for o in cluster)
-        rows.append((row_min, row_max))
-        cols.append((col_min, col_max))
         current_mask = mask[row_min:row_max, col_min:col_max]
         logging.debug('mask ratio', np.sum(current_mask > 0) / np.prod(np.shape(current_mask)))
         current_mask = ndimage.binary_fill_holes(current_mask).astype(np.uint8) * 255
         cluster_objects.append(current_mask)
-    return cluster_objects, rows, cols
+    return cluster_objects
 
-data_path = Path("../immuno_project/data/A02634-2C/thumbnails")
-img1_path = data_path / "A02634-2C-RE.png"
-img1 = Image.open(str(img1_path))
 
-img2_path = data_path / "A02634-2C.png"
-img2 = Image.open(str(img2_path))
-img2_cv = cv2.imread(str(img2_path))
+for im_path in image_iterator(False):
+    img = cv2.imread(str(im_path))
 
-"""
-mask = get_tissue_pale_check(img1)
-mask = Image.fromarray(mask)
-mask.show()
-"""
+    mask = get_tissue_pale_check(img)
 
-mask = get_tissue_pale_check(img2)
-print(mask)
-# while 1:
-#     cv2.imshow("image", mask.astype(np.uint8))
-#     if cv2.waitKey(20) & 0xFF == 27:
-#         break
-# cv2.destroyAllWindows()
+    clusters = breakdown_mask_into_pieces(mask)
+    cluster_image = img.copy()
+    cluster_image = cv2.resize(cluster_image, (clusters[0].shape[1], clusters[0].shape[0]))
+    for i, cluster in enumerate(clusters):
+        color = cm.Set1(i % 8)[:3]
+        color_mask = (np.stack([color[2] * cluster, color[1] * cluster, color[0] * cluster], axis=2) / 2).astype(int)
+        # tmp[r_min:r_max, c_min:c_max] = [242, 148, 211]
+        cluster_image = np.clip(cluster_image + color_mask, 0, 255)
+        # tmp[r_max:, c_max:] = [0, 0, 0]
+        # tmp[:r_min, :c_min] = [0, 0, 0]
 
-clusters, rows, cols = breakdown_mask_into_pieces(mask)
-tmp = img2_cv.copy()
-for i, c, (r_min, r_max), (c_min, c_max) in zip(range(len(clusters)), clusters, rows, cols):
-    print(c.shape)
-    # tmp[r_min:r_max, c_min:c_max] = [242, 148, 211]
-    tmp = cv2.rectangle(tmp, (c_min, r_min), (c_max, r_max), (148, 240, 100), 5)
-    # tmp[r_max:, c_max:] = [0, 0, 0]
-    # tmp[:r_min, :c_min] = [0, 0, 0]
-tmp = cv2.resize(tmp, (int(tmp.shape[1] * 1000 / tmp.shape[0]), 1000))
-mask = mask.astype(np.uint8)
-mask = cv2.resize(mask, (int(mask.shape[1] * 1000 / mask.shape[0]), 1000))
-while 1:
-    cv2.imshow("image clusters", tmp)
-    cv2.imshow("mask", mask)
-    if cv2.waitKey(20) & 0xFF == 27:
-        break
-cv2.destroyAllWindows()
+    # mask = mask.astype(np.uint8)
+    # mask = cv2.resize(mask, (int(mask.shape[1] * 1000 / mask.shape[0]), 1000))
+    while 1:
+        cv2.imshow("image clusters", cluster_image)
+        # cv2.imshow("mask", mask)
+        if cv2.waitKey(20) & 0xFF == 27:
+            break
+    cv2.destroyAllWindows()

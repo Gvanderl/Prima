@@ -23,7 +23,7 @@ def itk_registration(fixed_input_image,
     movingImage = cv2.imread(moving_input_image.as_posix())
     movingImage = cv2.resize(movingImage, fixedImage.shape[:2:][::-1])
     fixedImage, movingImage = whitewashing(fixedImage), whitewashing(movingImage)
-    fixedImage, movingImage = otsu(fixedImage), otsu(movingImage)
+    # fixedImage, movingImage = otsu(fixedImage), otsu(movingImage)
     cv2.imwrite('tmp1.png', fixedImage)
     cv2.imwrite('tmp2.png', movingImage)
     fixedImage = itk.imread('tmp1.png', PixelType)
@@ -37,6 +37,8 @@ def itk_registration(fixed_input_image,
     MovingImageType = itk.Image[PixelType, Dimension]
     print(2)
     TransformType = itk.TranslationTransform[itk.D, Dimension]
+    # TransformType = itk.AffineTransform[itk.D, Dimension]
+    # TransformType = itk.ScaleTransform[itk.D, Dimension]
     initialTransform = TransformType.New()
     print(3)
     optimizer = itk.RegularStepGradientDescentOptimizerv4.New(
@@ -82,12 +84,6 @@ def itk_registration(fixed_input_image,
 
     bestValue = optimizer.GetValue()
 
-    print("Result = ")
-    print(" Translation X = " + str(translationAlongX))
-    print(" Translation Y = " + str(translationAlongY))
-    print(" Iterations    = " + str(numberOfIterations))
-    print(" Metric value  = " + str(bestValue))
-
     CompositeTransformType = itk.CompositeTransform[itk.D, Dimension]
     outputCompositeTransform = CompositeTransformType.New()
     outputCompositeTransform.AddTransform(movingInitialTransform)
@@ -128,4 +124,14 @@ def itk_registration(fixed_input_image,
     writer.SetFileName((output_folder / f"{output_name}_before.png").as_posix())
     writer.Update()
 
-    return translationAlongX / movingImage.shape[1], translationAlongY / movingImage.shape[0]
+    trans = np.array(
+        [[1, 0, -translationAlongX / fixedImage.shape[1]],
+         [0, 1, -translationAlongY / fixedImage.shape[0]]]
+    )
+    # trans = np.array(
+    #     [[1, 0, -finalParameters.GetElement(2) / fixedImage.shape[1]],
+    #      [0, 1, -finalParameters.GetElement(5) / fixedImage.shape[0]]]
+    # )
+
+
+    return trans
